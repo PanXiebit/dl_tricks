@@ -1,0 +1,2 @@
+model_checkpoint_path: "temp-bn-save"
+all_model_checkpoint_paths: "temp-bn-save"
