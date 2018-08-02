@@ -70,36 +70,46 @@ class Model:
                 pop_mean, pop_var, beta, scale, epsilon)
 
     @staticmethod
-    def batch_norm_wrap2(x, is_training, eps=1e-05, decay=0.9, name=None):  # x.shape=[None, 100]
-        with tf.variable_scope(name, default_name='BatchNorm2d'):
-            params_shape = x.get_shape()[-1]    # tuple (100)
-            moving_mean = tf.get_variable('mean', params_shape,
-                                          initializer=tf.zeros_initializer,
-                                          trainable=False) # [100,]
-            moving_variance = tf.get_variable('variance', params_shape,
-                                              initializer=tf.ones_initializer,
-                                              trainable=False)
+    def Normalize_mine(inputs,
+                       epsilon=1e-8,
+                       decay = 0.9,
+                       is_training=True):
+        """
 
-            def mean_var_with_update():
-                #mean, variance = tf.nn.moments(x, tf.shape(x)[:-1], name='moments')
-                mean, variance = tf.nn.moments(x, x.get_shape()[-1], name='moments')
+        :param inputs: [None, length_q, d_model]
+        :param epsilon:
+        :param decay:
+        :param is_training:
+        :return:
+        """
+        with tf.variable_scope("batch-normalization"):
+            param_shape = inputs.get_shape()[:-1] # [None, length_q]
+            pop_mean = tf.get_variable("mean", param_shape, initializer=tf.zeros_initializer, trainable=False)
+            pop_var = tf.get_variable("variance", param_shape, initializer=tf.ones_initializer, trainable=False)
 
-                with tf.control_dependencies([assign_moving_average(moving_mean, mean, decay),
-                                              assign_moving_average(moving_variance, variance, decay)]):
-                    # Return a tensor with the same shape and contents as input.
-                    return tf.identity(mean), tf.identity(variance)
+            def mean_and_var_update():
+                batch_mean, batch_var = tf.nn.moments(inputs, param_shape, name="moments")  # [None, length_q]
+                # 用滑动平均值来统计整体的均值和方差,在训练阶段并用不上,在测试阶段才会用,这里是保证在训练阶段计算了滑动平均值
+                train_mean = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1 - decay))
+                # 也可用 assign_moving_average(pop_mean, batch_mean, decay)
+                train_var = tf.assign(pop_var, pop_var * decay + batch_var * (1 - decay))
+                # 也可用 assign_moving_average(pop_var, batch_var, decay)
 
-            # true_fn: The callable to be performed if pred is true.
-            mean, variance = tf.cond(is_training, mean_var_with_update, lambda: (moving_mean, moving_variance))
+                # control_dependencies 的作用是,但我们在训练阶段引用 batch_mean,batch_batch_var 时,
+                # tf.identity 是一个op操作,因此会先执行control_dependencies中的参数操作.
+                # A list of `Operation` or `Tensor` objects which must be executed or computed
+                # before running the operations defined in the context.
+                with tf.control_dependencies([train_mean, train_var]):
+                    return tf.identity(batch_mean), tf.identity(batch_var)
+
+            mean, variance = tf.cond(is_training, mean_and_var_update(), lambda:(pop_mean, pop_var))
+
             if is_training:
-                beta = tf.get_variable('beta', params_shape,
-                                       initializer=tf.zeros_initializer)
-                gamma = tf.get_variable('gamma', params_shape,
-                                        initializer=tf.ones_initializer)
-                x = tf.nn.batch_normalization(x, mean, variance, beta, gamma, eps)
+                beta = tf.get_variable("shift", shape=inputs.get_shape()[-1], initializer=tf.zeros_initializer)
+                gamma = tf.get_variable("scale", shape=inputs.get_shape()[-1], initializer=tf.ones_initializer)
+                return tf.nn.batch_normalization(inputs, mean, variance, beta, gamma, epsilon)
             else:
-                x = tf.nn.batch_normalization(x, mean, variance, None, None, eps)
-            return x
+                return tf.nn.batch_normalization(inputs, mean, variance, None, None, epsilon)
 
 tf.reset_default_graph()
 model = Model()
@@ -121,7 +131,7 @@ def train():
                               feed_dict={model.x:mnist.test.images,model.y_:mnist.test.labels,model.is_training:None})
                 acc.append(res[0])
                 if i%200 == 0:
-                    print("{} steps, train accuracy is {}, val_acc is {}".format(i, train_acc, res[0]))
+                    print("{} steps, train_acc is {}, val_acc is {}".format(i, train_acc, res[0]))
         saver.save(sess=sess, save_path='./temp-bn-save')
         writer.close()
 
@@ -144,4 +154,4 @@ def test():
 if __name__ == "__main__":
     train()
     print("======test=====")
-    #test()
+    test()
