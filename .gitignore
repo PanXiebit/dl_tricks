@@ -1,1 +1,2 @@
 *.gz
+data_processing/cifar-10-batches-py/
