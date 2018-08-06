@@ -1,2 +1,5 @@
 *.gz
-data_processing/cifar-10-batches-py/
+input_pipeline/dataset
+*.pyc
+*.bin
+*data_batch*
