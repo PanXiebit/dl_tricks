@@ -118,9 +118,8 @@ saver = tf.train.Saver()
 def train():
     acc = []
     merged = tf.summary.merge_all()
+    writer = tf.summary.FileWriter('./graph/train',graph=tf.get_default_graph())
     with tf.Session() as sess:
-        writer = tf.summary.FileWriter('/tmp/summary/mnist' + '/train', sess.graph)
-        #test_writer = tf.summary.FileWriter('/tmp/summary/mnist' + '/test', sess.graph)
         sess.run(tf.global_variables_initializer())
         for i in range(10000):
             batch = mnist.train.next_batch(60)
@@ -132,8 +131,8 @@ def train():
                 acc.append(res[0])
                 if i%200 == 0:
                     print("{} steps, train_acc is {}, val_acc is {}".format(i, train_acc, res[0]))
-        saver.save(sess=sess, save_path='./temp-bn-save')
-        writer.close()
+        saver.save(sess=sess, save_path='./temp/bn-save')
+    writer.close()
 
 ### ==================================== test ============================================== ###         
 def test():
@@ -154,4 +153,4 @@ def test():
 if __name__ == "__main__":
     train()
     print("======test=====")
-    test()
+    # test()
