@@ -131,7 +131,7 @@ def train():
                 acc.append(res[0])
                 if i%200 == 0:
                     print("{} steps, train_acc is {}, val_acc is {}".format(i, train_acc, res[0]))
-        saver.save(sess=sess, save_path='./temp/bn-save')
+        saver.save(sess=sess, save_path='./temp/bn-save.ckpt')
     writer.close()
 
 ### ==================================== test ============================================== ###         
@@ -141,7 +141,7 @@ def test():
     correct = 0
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, './temp-bn-save')
+        saver.restore(sess, './temp/bn-save.ckpt')
         for i in range(100):
             corr = sess.run([model.accuracy_BN],
                                  feed_dict = {model.x:[mnist.test.images[i]], 
@@ -153,4 +153,4 @@ def test():
 if __name__ == "__main__":
     train()
     print("======test=====")
-    # test()
+    test()
