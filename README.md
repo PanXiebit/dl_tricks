@@ -1,4 +1,4 @@
-#　dl_tricks
+# dl_tricks
 主要参考《深入理解 Tensorflow 架构设计与实现原理》这本书，实现 deep learning 中一些 tools 和 tricks.
 
 ## batch normalization
