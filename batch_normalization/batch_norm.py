@@ -11,7 +11,7 @@ class Model:
     def __init__(self):
         # add placeholder
         self.x = tf.placeholder(tf.float32, shape=[None, 784], name='input_x')
-        self.y_ = tf.placeholder(tf.float32, shape = [None, 10],name='input_y')
+        self.y = tf.placeholder(tf.float32, shape = [None, 10],name='input_y')
         self.is_training = tf.placeholder(tf.bool, shape=[], name="is_training")
 
         # parameters
@@ -32,22 +32,22 @@ class Model:
             z2 = tf.matmul(l1,w2)
             BN = self.batch_norm_mine(z2, self.is_training)
             # BN_2 = batch_norm(z2_BN, center=True, scale=True, is_training=self.is_training)
-            l2_BN = tf.nn.sigmoid(BN)
+            l2 = tf.nn.sigmoid(BN)
         with tf.name_scope("layer3-softmax"):
-            w3_BN = tf.Variable(w3_initial)
-            b3_BN = tf.Variable(tf.zeros([10]))
-            y_BN = tf.nn.softmax(tf.matmul(l2_BN, w3_BN)+b3_BN)
+            w3 = tf.Variable(w3_initial)
+            b3 = tf.Variable(tf.zeros([10]))
+            y = tf.nn.softmax(tf.matmul(l2, w3)+b3)
 
         # loss
-        self.loss = -tf.reduce_sum(self.y_*tf.log(y_BN))
+        self.loss = -tf.reduce_sum(self.y*tf.log(y))
         tf.summary.scalar("loss", self.loss)
         # optimizer
         self.train_step = tf.train.GradientDescentOptimizer(0.01).minimize(self.loss)   
         # accuracy
-        self.predict = tf.argmax(y_BN, axis=1)
-        correct_prediction_BN = tf.equal(self.predict, tf.argmax(self.y_, 1))
-        self.accuracy_BN = tf.reduce_mean(tf.cast(correct_prediction_BN, tf.float32))
-        tf.summary.scalar("accuracy", self.accuracy_BN)
+        self.predict = tf.argmax(y, axis=1)
+        correct_prediction = tf.equal(self.predict, tf.argmax(self.y, 1))
+        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        tf.summary.scalar("accuracy", self.accuracy)
 
     def batch_norm_mine(self,
                        inputs,
@@ -107,11 +107,11 @@ def train():
         sess.run(tf.global_variables_initializer())
         for i in range(10000):
             batch = mnist.train.next_batch(60)
-            _, train_acc = sess.run([model.train_step, model.accuracy_BN],
-                feed_dict={model.x:batch[0], model.y_:batch[1], model.is_training:True})
+            _, train_acc = sess.run([model.train_step, model.accuracy],
+                feed_dict={model.x:batch[0], model.y:batch[1], model.is_training:True})
             if i%100 == 0:
-                res = sess.run([model.accuracy_BN, model.loss, merged],
-                              feed_dict={model.x:mnist.test.images,model.y_:mnist.test.labels,
+                res = sess.run([model.accuracy, model.loss, merged],
+                              feed_dict={model.x:mnist.test.images,model.y:mnist.test.labels,
                                          model.is_training:None})
                 acc.append(res[0])
                 if i%200 == 0:
@@ -130,9 +130,9 @@ def test():
         saver = tf.train.import_meta_graph("./temp/bn-save.meta")
         saver.restore(sess, tf.train.latest_checkpoint("./temp/"))
         for i in range(100):
-            corr, pred = sess.run([model.accuracy_BN, model.predict],
+            corr, pred = sess.run([model.accuracy, model.predict],
                                  feed_dict = {model.x:[mnist.test.images[i]],
-                                              model.y_:[mnist.test.labels[i]],
+                                              model.y:[mnist.test.labels[i]],
                                               model.is_training:None})
             correct += corr
             preds.append(pred)
