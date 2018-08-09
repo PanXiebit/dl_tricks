@@ -25,13 +25,13 @@ class Model:
             w1 = tf.Variable(w1_initial)   # [784, 100]
             z1 = tf.matmul(self.x, w1)  # [None, 100]
             BN = self.batch_norm_mine(z1, self.is_training)
-            # BN_1 = batch_norm(z1_BN, center=True, scale=True, is_training=self.is_training)
+            # BN_1 = batch_norm(z1, center=True, scale=True, is_training=self.is_training)
             l1 = tf.nn.sigmoid(BN)
         with tf.name_scope('layer2'):
             w2 = tf.Variable(w2_initial)
             z2 = tf.matmul(l1,w2)
             BN = self.batch_norm_mine(z2, self.is_training)
-            # BN_2 = batch_norm(z2_BN, center=True, scale=True, is_training=self.is_training)
+            # BN_2 = batch_norm(z2, center=True, scale=True, is_training=self.is_training)
             l2 = tf.nn.sigmoid(BN)
         with tf.name_scope("layer3-softmax"):
             w3 = tf.Variable(w3_initial)
@@ -44,9 +44,9 @@ class Model:
         # optimizer
         self.train_step = tf.train.GradientDescentOptimizer(0.01).minimize(self.loss)   
         # accuracy
-        self.predict = tf.argmax(y, axis=1)
+        self.predict = tf.argmax(y, axis=1, name="prediction")
         correct_prediction = tf.equal(self.predict, tf.argmax(self.y, 1))
-        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name="accuracy")
         tf.summary.scalar("accuracy", self.accuracy)
 
     def batch_norm_mine(self,
@@ -85,15 +85,12 @@ class Model:
                 with tf.control_dependencies([assign_moving_average(pop_mean, batch_mean, decay),
                                               assign_moving_average(pop_var, batch_var, decay)]):
                     return tf.identity(batch_mean), tf.identity(batch_var)
-
             mean, variance = tf.cond(is_training, mean_and_var_update, lambda:(pop_mean, pop_var))
 
-            if is_training is not None:
-                beta = tf.Variable(initial_value=tf.zeros(inputs.get_shape()[-1]), name="shift")
-                gamma = tf.Variable(initial_value=tf.ones(inputs.get_shape()[-1]), name="scale")
-                return tf.nn.batch_normalization(inputs, mean, variance, beta, gamma, epsilon)
-            else:
-                return tf.nn.batch_normalization(inputs, mean, variance, None, None, epsilon)
+            beta = tf.Variable(initial_value=tf.zeros(inputs.get_shape()[-1]), name="shift")
+            gamma = tf.Variable(initial_value=tf.ones(inputs.get_shape()[-1]), name="scale")
+            return tf.cond(is_training,lambda: tf.nn.batch_normalization(inputs, mean, variance, beta, gamma, epsilon),
+                           lambda: tf.nn.batch_normalization(inputs, mean, variance, beta, gamma, epsilon))
 
 
 model = Model()
@@ -108,38 +105,19 @@ def train():
         for i in range(10000):
             batch = mnist.train.next_batch(60)
             _, train_acc = sess.run([model.train_step, model.accuracy],
-                feed_dict={model.x:batch[0], model.y:batch[1], model.is_training:True})
-            if i%100 == 0:
+                                    feed_dict={model.x:batch[0], model.y:batch[1],
+                                               model.is_training:True})
+            if i%200 == 0:
                 res = sess.run([model.accuracy, model.loss, merged],
                               feed_dict={model.x:mnist.test.images,model.y:mnist.test.labels,
-                                         model.is_training:None})
+                                         model.is_training:False})
                 acc.append(res[0])
-                if i%200 == 0:
-                    print("{} steps, train_acc is {}, val_acc is {}".format(i, train_acc, res[0]))
+                print("{} steps, train_acc is {}, val_acc is {}".format(i, train_acc, res[0]))
         saver.save(sess=sess, save_path='./temp/bn-save')
     writer.close()
 
-### ==================================== test ============================================== ###         
-def test():
-    tf.reset_default_graph()
-    model = Model()
-    correct = 0
-    preds = []
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        saver = tf.train.import_meta_graph("./temp/bn-save.meta")
-        saver.restore(sess, tf.train.latest_checkpoint("./temp/"))
-        for i in range(100):
-            corr, pred = sess.run([model.accuracy, model.predict],
-                                 feed_dict = {model.x:[mnist.test.images[i]],
-                                              model.y:[mnist.test.labels[i]],
-                                              model.is_training:None})
-            correct += corr
-            preds.append(pred)
-    print("test accuracy is {}".format(correct/100))
-    print("prediction is {}".format(preds))
 
 if __name__ == "__main__":
     train()
+    print(tf.global_variables())
     print("======test=====")
-    test()
