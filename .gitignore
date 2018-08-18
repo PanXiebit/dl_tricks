@@ -3,3 +3,6 @@ input_pipeline/dataset
 *.pyc
 *.bin
 *data_batch*
+batch_normalization/temp
+batch_normalization/graph
+*.buaa-panxie

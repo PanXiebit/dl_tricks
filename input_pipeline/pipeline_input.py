@@ -22,8 +22,8 @@ def read_cifar10(filename_list, batch_size=64, num_epochs=10):
     :param data_file:
     :param batch_size:
     :return:
-        - the batch image data, shape is [batch_size, image_size, image_size, 3]
-        - the batch labels data, shape is [batch_data, NUM_CLAEESE]
+        - the batch image glove_wv, shape is [batch_size, image_size, image_size, 3]
+        - the batch labels glove_wv, shape is [batch_data, NUM_CLAEESE]
     """
     # 文件名队列
     file_queue = tf.train.string_input_producer(filename_list, num_epochs=num_epochs, shuffle=True)
