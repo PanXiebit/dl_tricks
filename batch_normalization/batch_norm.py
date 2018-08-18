@@ -24,14 +24,16 @@ class Model:
         with tf.name_scope("layer1"):
             w1 = tf.Variable(w1_initial)   # [784, 100]
             z1 = tf.matmul(self.x, w1)  # [None, 100]
-            BN = self.batch_norm_mine(z1, self.is_training)
-            # BN_1 = batch_norm(z1, center=True, scale=True, is_training=self.is_training)
+            # BN = self.batch_norm_mine(z1, self.is_training)
+            # BN = batch_norm(z1, center=True, scale=True, is_training=self.is_training)
+            BN = tf.layers.batch_normalization(z1) # training=False 不使用反而效果好,很奇怪...
             l1 = tf.nn.sigmoid(BN)
         with tf.name_scope('layer2'):
             w2 = tf.Variable(w2_initial)
             z2 = tf.matmul(l1,w2)
-            BN = self.batch_norm_mine(z2, self.is_training)
-            # BN_2 = batch_norm(z2, center=True, scale=True, is_training=self.is_training)
+            # BN = self.batch_norm_mine(z2, self.is_training)
+            # BN = batch_norm(z2, center=True, scale=True, is_training=self.is_training)
+            BN = tf.layers.batch_normalization(z2)
             l2 = tf.nn.sigmoid(BN)
         with tf.name_scope("layer3-softmax"):
             w3 = tf.Variable(w3_initial)
@@ -89,8 +91,7 @@ class Model:
 
             beta = tf.Variable(initial_value=tf.zeros(inputs.get_shape()[-1]), name="shift")
             gamma = tf.Variable(initial_value=tf.ones(inputs.get_shape()[-1]), name="scale")
-            return tf.cond(is_training,lambda: tf.nn.batch_normalization(inputs, mean, variance, beta, gamma, epsilon),
-                           lambda: tf.nn.batch_normalization(inputs, mean, variance, beta, gamma, epsilon))
+            return tf.nn.batch_normalization(inputs, mean, variance, beta, gamma, epsilon)
 
 
 model = Model()
