@@ -6,3 +6,10 @@ input_pipeline/dataset
 batch_normalization/temp
 batch_normalization/graph
 *.buaa-panxie
+tf-estimator/model/
+*.index
+*.meta
+*model.ckpt*
+*.pbtxt
+*checkpoint
+*events.out.tfevents*
